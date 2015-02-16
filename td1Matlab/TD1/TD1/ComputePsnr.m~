@@ -1,0 +1,8 @@
+function [ output_args ] = ComputePsnr( eigen, noisy )
+max = max(eigen(:));
+(eigen - noisy)
+(y - yhat).^2
+mean((eigen - noisy).^2)
+RMSE = sqrt(mean((eigen - noisy).^2));
+end
+

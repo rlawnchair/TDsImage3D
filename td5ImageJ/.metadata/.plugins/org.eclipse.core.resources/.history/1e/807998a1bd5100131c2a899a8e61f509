@@ -1,0 +1,82 @@
+public class Voxel {
+	private int m_x;
+	private int m_y;
+	private int m_z;
+	private int m_dx;
+	private int m_dy;
+	private int m_dz;
+	private int m_d2;
+	private boolean m_infinite;
+	private boolean m_find;
+
+	public Voxel(int x, int y, int z, Boolean background) {
+		if (background) {
+			m_dx = 0;
+			m_dy = 0;
+			m_dz = 0;
+			m_d2 = 0;
+			m_infinite = false;
+		} else {
+			m_dx = -1;
+			m_dy = -1;
+			m_dz = -1;
+			m_d2 = Integer.MAX_VALUE;
+			m_infinite = true;
+		}
+		m_x = x;
+		m_y = y;
+		m_z = z;
+		m_find = false;
+	}
+
+	public int getD2() {
+		return m_d2;
+	}
+
+	public int getDx() {
+		return m_dx;
+	}
+
+	public int getDy() {
+		return m_dy;
+	}
+
+	public int getDz() {
+		return m_dz;
+	}
+
+	public int getX() {
+		return m_x;
+	}
+
+	public int getY() {
+		return m_y;
+	}
+
+	public int getZ() {
+		return m_z;
+	}
+
+	public void updateVecD(int dx, int dy, int dz) {
+		m_dx = dx;
+		m_dy = dy;
+		m_dz = dz;
+		m_infinite = false;
+	}
+
+	public void updateD2(int d2) {
+		m_d2 = d2;
+	}
+
+	public boolean isInfinite() {
+		return m_infinite;
+	}
+
+	public boolean isFind() {
+		return m_find;
+	}
+
+	public void find() {
+		m_find = true;
+	}
+}

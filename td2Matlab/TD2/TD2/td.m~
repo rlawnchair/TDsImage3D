@@ -1,0 +1,13 @@
+load 'MRIT1w.mat';
+[noiseImg,sigma] = AddGaussianNoise(MRIT1w,7);
+PSNR(1) = ComputePsnr(MRIT1w,noiseImg);
+% imagesc(noiseImg(:,:,90));
+% colormap gray;
+% axis image;
+tic;
+[denoised] = GaussianDenoising(noiseImg, 7, 7);
+i
+imagesc(denoised(:,:,90));
+colormap gray;
+axis image;
+toc;

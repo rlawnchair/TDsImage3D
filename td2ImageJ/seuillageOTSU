@@ -1,0 +1,16 @@
+Seuillage OTSU
+
+-calcul histo
+-intervalle min-max des NG
+S1 somme des pixels foncés = 0
+S2 somme des pixels clairs = SIGMA(histo)
+sig = 0;
+
+calcul de max t min -> max
+	S1 += histo[t] * t
+	S2 += histo[t] * t
+	n1 += histo[t]
+	n2 -= histo[t]
+	m1 = S1/n1
+	m2 = S2/n2
+	sig = n1 * n2 * (m1-m2)(m1-m2)/(N*N)

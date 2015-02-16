@@ -1,0 +1,130 @@
+import ij.*;
+import ij.process.*;
+import ij.gui.*;
+import java.awt.*;
+import ij.plugin.filter.*;
+
+public class Contour_Analysis implements PlugInFilter {
+    ImagePlus imp;
+    int W, H; // taille de l'image initiale
+    int iMin, iMax, jMin, jMax; // coordonnées de la ROI contenant l'objet analysé
+    int GL; // niveau de gris de l'objet analysé
+    int ZL; // niveau de zoom de la visualisation
+    private static final int NSIZE = 5;
+
+
+    /**
+     * Set ups this filter. Process only 8 bits grey-level images.
+     */
+    public int setup(String arg, ImagePlus imp) {
+	if ( arg == "about" ) {
+	    IJ.showMessage( "about Contour_Analysis ...", 
+			    "displays the contour's dominant points");
+	    return DONE;
+	}
+	this.imp = imp;
+	return DOES_8G;
+    }
+
+
+
+    private int getIVisu(Path p, int ind){
+	return (p.getContourX(ind)-iMin+1)*ZL;
+    }
+
+    private int getJVisu(Path p, int ind){
+	return (H-1-p.getContourY(ind)-jMin)*ZL;
+    }
+
+    private int getIVisu(int x){
+	return (x-iMin+1)*ZL;
+    }
+
+    private int getJVisu(int y){
+	return (H-1-y-jMin)*ZL;
+    }
+
+
+    public void run( ImageProcessor ip ) {
+	// Permet de recuperer des parametres.
+	GenericDialog gd = new GenericDialog( "Contour Extraction parameters",
+					      IJ.getInstance() );
+	gd.addNumericField( "gray level", 0, 0, 3, "" );
+	String[] ZLChoice = {"2", "4", "8", "16"};
+	gd.addChoice("zoom level", ZLChoice, "4"); 
+	gd.showDialog();
+	if ( gd.wasCanceled() ) {
+	    IJ.error( "PlugIn cancelled" );
+	    return;
+	}
+	GL = (int) gd.getNextNumber();
+	ZL = (int)Math.pow(2, gd.getNextChoiceIndex()+1);
+	W = ip.getWidth();
+	H = ip.getHeight();
+
+	// Crée le contour de la région
+	int margin = 3;
+	FreemanCode c = new FreemanCode(ip, GL);
+	Path p = new Path(c);
+	iMin = (int)p.getPMin().getX() - margin + 1;
+	iMax = (int)p.getPMax().getX() + margin;
+	jMax = H-1 - ((int)p.getPMin().getY() - margin + 1);
+	jMin = H-1 - ((int)p.getPMax().getY() + margin);
+
+
+	// Crée l'image de sortie
+	ip.setRoi(iMin, jMin, iMax-iMin+1, jMax-jMin+1);
+	ImageProcessor ipz = ip.resize((iMax-iMin+1)*ZL, (jMax-jMin+1)*ZL);
+
+	// Tracé de la grille 1/2
+	ipz.setColor(Color.black);
+	for(int i=0; i<W*ZL; i+=ZL) 
+	    for(int j=0; j<H*ZL; j+=ZL) 
+		ipz.drawPixel(i, j);
+
+	// Tracé du chemin
+	ImageProcessor ipzc = ipz.convertToRGB();
+	ipzc.setColor(Color.red);
+	int ind, i1, j1, i2=0, j2=0;
+	for(ind=0; ind<p.getLength()-1; ind++){
+	    i1 = getIVisu(p, ind); 
+	    j1 = getJVisu(p, ind); 
+	    i2 = getIVisu(p, ind+1); 
+	    j2 = getJVisu(p, ind+1); 
+	    ipzc.drawLine(i1, j1, i2, j2);
+	}
+	i1 = i2;
+	j1 = j2;
+	i2 = getIVisu(p, 0); 
+	j2 = getJVisu(p, 0); 
+	ipzc.drawLine(i1, j1, i2, j2);
+
+	// Tracé des normales
+	ipzc.setColor(Color.green);
+	for(ind = 0; ind < p.getLength(); ind+=5){
+	    int x = p.getContourX(ind);
+	    int y = p.getContourY(ind);
+	    int a = p.getContourTY(ind);
+	    int b = p.getContourTX(ind);
+	    double norme = Math.sqrt(a*a+b*b);
+	    i1 = getIVisu(x);
+	    j1 = getJVisu(y);
+	    i2 = getIVisu((int)(x-(NSIZE*a)/norme+0.5));
+	    j2 = getJVisu((int)(y+(NSIZE*b)/norme+0.5));
+	    ipzc.drawLine(i1, j1, i2, j2);
+
+	}
+
+	// Affichage des points dominants : TODO
+
+	ImagePlus visu = new ImagePlus("Discrete contour + normals", ipzc);
+
+	// displays it in a window.
+	visu.show();
+	// forces the redisplay.
+	visu.updateAndDraw();
+
+    }
+
+}
+			      

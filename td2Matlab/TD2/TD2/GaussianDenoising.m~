@@ -1,0 +1,5 @@
+function [ outputImg ] = GaussianDenoising(noiseImg, kernSize, spatialKern)
+w = exp( -(p - q.^2)/(2*spatialKern^2) );
+cp = sum(w);
+end
+

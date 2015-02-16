@@ -1,0 +1,19 @@
+function [ kern ] = GaussianKernel( kernSize, spatialKern)
+%size = kernSize^3;
+%kern = fspecial('gaussian',kernSize, spatialKern);
+clc;
+close all;
+twiceSigmaSquared = 2.5;
+amplitude = 100;
+
+for x = 1:7
+    for y=1:7
+        for z=1:7
+            radiusSquared = (x-4)^2 + (y-4)^2 + (z-4)^2;
+            gaussKernel(x, y, z) = amplitude * exp(-radiusSquared/twiceSigmaSquared);
+        end
+    end
+end
+
+end
+

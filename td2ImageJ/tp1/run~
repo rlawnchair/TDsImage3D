@@ -1,0 +1,1 @@
+/net/ens/ImageJ/jre/bin/java -Xmx512m -Dplugins.dir=/net/ens/ImageJ -cp /net/ens/ImageJ/ij.jar ij.ImageJ

@@ -1,0 +1,158 @@
+import ij.*;
+import ij.process.*;
+import ij.gui.*;
+import ij.plugin.filter.*;
+
+public class SED_3D implements PlugInFilter {
+	ImagePlus imp;
+	int H, W, D;
+	Voxel[] voxels;
+
+	public int setup(String arg, ImagePlus imp) {
+		if (arg == "about") {
+			IJ.showMessage("about SED ...",
+					"computes an euclidean distance map "
+							+ "from 3D white components on a black background");
+			return DONE;
+		}
+		this.imp = imp;
+		return DOES_8G;
+	}
+
+	public void run(ImageProcessor ip) {
+		W = ip.getWidth();
+		H = ip.getHeight();
+		D = imp.getStackSize();
+		int size = W * H * D;
+		voxels = new Voxel[size];
+
+		// création de l'image de distance
+		ImagePlus dm = NewImage.createByteImage(
+				"Distance Map of " + imp.getTitle(), W, H, D, 0);
+		ImageProcessor dip = dm.getProcessor();
+
+		// calcul de l'image de distance
+		
+		// Initialisation des Voxels
+		for (int z = 1; z <= D; ++z) {
+			imp.setSlice(z);
+			ip = imp.getProcessor();
+			for (int y = 0; y < H; ++y) {
+				for (int x = 0; x < W; ++x){
+					int indice = x + y * W + (z - 1) * W * H;
+					if (ip.get(x, y) > 0)
+						voxels[indice] = new Voxel(x, y, z, false);
+					else
+						voxels[indice] = new Voxel(x, y, z, true);
+				}
+			}
+		}
+
+		//Parcours de l'image
+		// Passe Avant F1+F2  F3+F4
+		for(int z = 0; z < D; ++z){
+			// F1 + F2
+			for ( int y = 0; y < H; ++y ) {
+				// F1
+				for ( int x = 0; x < W; ++x ){
+					updateDist(x, y, z, -1, 0, 0);
+					updateDist(x, y, z, 0, -1, 0);
+					updateDist(x, y, z, 0, 0, -1);
+				}
+				// F2
+				for ( int x = W-1; x >= 0; --x ){
+					updateDist(x, y, z, 1, 0, 0);
+					updateDist(x, y, z, 0, -1, 0);
+				}
+			}
+			// F3 + F4
+			for ( int y = H-1; y >= 0; --y ) {
+				// F3
+				for ( int x = 0; x < W; ++x ){
+					updateDist(x, y, z, 1, 0, 0);
+					updateDist(x, y, z, 0, 1, 0);
+				}
+				// F4
+				for ( int x = W-1; x >= 0; --x ){
+					updateDist(x, y, z, -1, 0, 0);
+					updateDist(x, y, z, 0, 1, 0);
+				}
+			}
+		}
+		//Parcours de l'image
+		// Passe Arriere B1+B2  B3+B4
+		for(int z = D-1; z >= 0; --z){
+			// B1 + B2
+			for ( int y = H-1; y >= 0; --y ) {
+				// B1
+				for ( int x = W-1; x >= 0; --x ){
+					updateDist(x, y, z, 1, 0, 0);
+					updateDist(x, y, z, 0, 1, 0);
+					updateDist(x, y, z, 0, 0, 1);
+				}
+				// B2
+				for ( int x = 0; x < W; ++x ){
+					updateDist(x, y, z, -1, 0, 0);
+					updateDist(x, y, z, 0, 1, 0);
+				}
+			}
+			// B3 + B4
+			for ( int y = 0; y < H; ++y ) {
+				// B3
+				for ( int x = 0; x < W; ++x ){
+					updateDist(x, y, z, -1, 0, 0);
+					updateDist(x, y, z, 0, -1, 0);
+				}
+				// B4
+				for ( int x = W-1; x >= 0; --x ){
+					updateDist(x, y, z, 1, 0, 0);
+					updateDist(x, y, z, 0, -1, 0);
+				}
+			}
+		}
+
+		int max = 0;
+		for(int i = 0; i < size; ++i){
+			if(voxels[i].getD2() > max)
+				max = voxels[i].getD2();
+		}
+
+		System.out.println(max);
+		int value;
+		for(int z = 1; z <= D; ++z){
+			dm.setSlice(z);
+			dip = dm.getProcessor();
+			for ( int y = 0; y < H; ++y ) {
+				for ( int x = 0; x < W; ++x ){
+					value = (voxels[x+y*W+(z-1)*W*H].getD2()*255)/max;
+					dip.set(x, y, value);	
+				}
+			}
+		}
+
+		
+		// affichage de l'image de distance
+		dm.show();
+		dm.updateAndDraw();
+	}
+
+	private void updateDist(int x, int y, int z, int dx, int dy, int dz){
+		int sx = x+dx;
+		int sy = y+dy;
+		int sz = z+dz;
+
+		if( (sx >= 0 && sx < W) && (sy >= 0 && sy < H) && (sz >= 0 && sz < D) ){
+			int indp = x+y*W+z*H*W;
+			int indv = sx+sy*W+sz*H*W;
+
+			if(!voxels[indv].isInfinite()){
+				int d2 = (voxels[indv].getDx()+dx)*(voxels[indv].getDx()+dx) + (voxels[indv].getDy()+dy)*(voxels[indv].getDy()+dy) + (voxels[indv].getDz()+dz)*(voxels[indv].getDz()+dz);
+
+				if(d2 < voxels[indp].getD2()){
+					voxels[indp].setD2(d2);
+					voxels[indp].setVecD(voxels[indv].getDx() + dx, voxels[indv].getDy() + dy, voxels[indv].getDz() + dz);
+				}
+			}
+		}
+	}
+}

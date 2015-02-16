@@ -1,0 +1,5 @@
+function [ outputImg, sigma ] = AddRicianNoise( input, noise, sigma )
+Ir = input+AddGaussianNoise(input,sigma);
+Ii = 
+end
+

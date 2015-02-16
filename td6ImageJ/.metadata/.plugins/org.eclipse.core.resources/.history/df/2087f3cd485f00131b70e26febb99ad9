@@ -1,0 +1,214 @@
+import java.awt.*;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+
+/**
+ * 
+ * @author jhitier
+ * @TODO Profil de courbure affichage des points dominants périmetre RosenProfit
+ */
+public class Path {
+
+	private double teta(int i) {
+		return Math.atan2(_tabPts[i]._ty, _tabPts[i]._tx);
+	}
+
+	private double computeGaussianDerivate(int i, int sigma) {
+		return ((-i) / ((sigma * sigma * sigma) * Math.sqrt(2 * Math.PI))) * Math.exp(-(i) * (i) / (2 * sigma * sigma));
+	}
+
+	private int circularIndex(int ind) {
+		if (ind >= _n)
+			return (ind % _n);
+		else if (ind < 0)
+			return (ind + _n) % _n;
+		return ind;
+	}
+
+	private void computeCurvature(int sigma) {
+		int m = 3 * sigma;
+		double g;
+		int ind1;
+		int ind2;
+		double teta;
+
+		for (int i = 0; i < _n; i++) {
+			double ind1Tx;
+			double ind1Ty;
+			double ind2Tx;
+			double ind2Ty;
+			teta = teta(i);//Math.atan2(_tabPts[i]._ty, _tabPts[i]._tx);
+
+			for (int k = 1; k <= m; k++) {
+				ind1 = circularIndex(i - k + _n);
+				ind2 = circularIndex(i + k);
+
+				ind1Tx = _tabPts[ind1]._tx * Math.cos(teta) - _tabPts[ind1]._ty * Math.sin(teta);
+				ind1Ty = _tabPts[ind1]._tx * Math.sin(teta) + _tabPts[ind1]._ty * Math.cos(teta);
+				ind2Tx = _tabPts[ind2]._tx * Math.cos(teta) - _tabPts[ind2]._ty * Math.sin(teta);
+				ind2Ty = _tabPts[ind2]._tx * Math.sin(teta) + _tabPts[ind2]._ty * Math.cos(teta);
+
+
+				g = computeGaussianDerivate(k, sigma);
+				_tabPts[i]._curvature+= -g * (Math.atan2(ind2Ty, ind2Tx) - Math.atan2(ind1Ty, ind1Tx));
+			}
+		}
+	}
+
+	private void findExtrema(double threshold){
+		double prevDiff = _tabPts[0]._curvature - _tabPts[1]._curvature;
+		int i=1;
+		while(i<_tabPts.length-1){    
+			double currDiff = 0;
+			int zeroCount = 0;
+			while(currDiff == 0 && i<_tabPts.length-1){
+				zeroCount++;
+				i++;
+				currDiff = _tabPts[i-1]._curvature - _tabPts[i]._curvature;
+			}
+
+			double signCurrDiff = Math.signum(currDiff);
+			double signPrevDiff = Math.signum(prevDiff);
+			if( signPrevDiff != signCurrDiff && signCurrDiff != 0){
+					int index = i-1-(zeroCount)/2;
+					if(signPrevDiff == 1){
+						mins.add( index );
+					}else{
+						if(_tabPts[index]._curvature >= threshold)
+							maxs.add( index );
+					}               
+			}
+			prevDiff = currDiff;
+		}
+	}
+
+	private double computePerimeter(FreemanCode c){
+		for(int i = 0; i < _n; i++){
+			System.out.println(c.getDeltaX(i));
+		}
+		return 0;
+	}
+
+	private class ContourPoint {
+		// repère x "vers le haut" et y "vers la droite"
+		// (x,y) désigne le point demi-entier (x+1/2, y+1/2)
+		int _x;
+		int _y;
+		// informations géométriques calculées:
+
+		// vecteur tangent
+		int _tx;
+		int _ty;
+
+		// courbure : TODO
+		double _curvature;
+
+	}
+
+	private int _n; // nb de points de contour
+	private ContourPoint[] _tabPts; // tableau des points de contour
+	private int _xm; // abscisse minimum
+	private int _ym; // ordonnée minimum
+	private int _xM; // abscisse maximum
+	private int _yM; // ordonnée maximum
+	private ArrayList<Integer> mins = new ArrayList<Integer>();
+	private ArrayList<Integer> maxs = new ArrayList<Integer>();
+	Path(FreemanCode c) {
+		_n = c.getLength();
+		_tabPts = new ContourPoint[_n];
+		for (int i = 0; i < _n; i++)
+			_tabPts[i] = new ContourPoint();
+		computeCoordinates(c);
+		computeTangents(c);
+		computeCurvature(3);
+		//computePerimeter(c);
+		findExtrema(0.2);
+		for(int i = 0; i < maxs.size();i++) {
+			System.out.println(maxs.get(i)+" "+_tabPts[maxs.get(i)]._curvature);
+			System.out.println(_tabPts[maxs.get(i)]._x+" , "+_tabPts[maxs.get(i)]._y);
+		}
+	}
+
+	private void computeCoordinates(FreemanCode c) {
+		int x = (int) c.getP0().getX(), y = (int) c.getP0().getY();
+		_xm = _xM = x;
+		_ym = _yM = y;
+		_tabPts[0]._x = x;
+		_tabPts[0]._y = y;
+
+		for (int i = 0; i < _n - 1; i++) {
+			x += c.getDeltaX(i);
+			if (x < _xm)
+				_xm = x;
+			if (x > _xM)
+				_xM = x;
+			y += c.getDeltaY(i);
+			if (y < _ym)
+				_ym = y;
+			if (y > _yM)
+				_yM = y;
+			_tabPts[i + 1]._x = x;
+			_tabPts[i + 1]._y = y;
+		}
+	}
+
+	private void computeTangents(FreemanCode c) {
+		DigitalTangent t;
+		int[][] sym4 = { { 1, 1 }, { -1, 1 }, { -1, -1 }, { 1, -1 } };
+
+		for (int i = 0; i < _n; i++) {
+			t = new DigitalTangent(c, i);
+			// calcul de symetries a partir des caracteristiques
+			// rapportees au 1er quadrant
+			int a = t.getA();
+			int b = t.getB();
+			int quad = t.getQuadrant();
+			_tabPts[i]._tx = sym4[quad][0] * b;
+			_tabPts[i]._ty = sym4[quad][1] * a;
+		}
+
+	}
+
+	public int getLength() {
+		return _n;
+	}
+
+	public Point getPMin() {
+		return new Point(_xm, _ym);
+	}
+
+	public Point getPMax() {
+		return new Point(_xM, _yM);
+	}
+
+	public int getContourX(int i) {
+		return _tabPts[i]._x;
+	}
+
+	public int getContourY(int i) {
+		return _tabPts[i]._y;
+	}
+
+	public int getContourTX(int i) {
+		return _tabPts[i]._tx;
+	}
+
+	public int getContourTY(int i) {
+		return _tabPts[i]._ty;
+	}
+
+	public double getCurvature(int i){
+		return _tabPts[i]._curvature;
+	}
+	
+	public ArrayList<Integer> getMaxs(){
+		return maxs;
+	}
+	
+	public ArrayList<Integer> getMins(){
+		return mins;
+	}
+
+}

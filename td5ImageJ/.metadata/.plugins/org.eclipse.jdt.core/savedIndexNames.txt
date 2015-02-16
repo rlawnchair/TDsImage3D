@@ -1,0 +1,16 @@
+INDEX VERSION 1.126+/autofs/netapp/travail/jhitier/Image3d/td5ImageJ/.metadata/.plugins/org.eclipse.jdt.core
+1122661187.index
+857617323.index
+144111494.index
+2637336020.index
+2502521416.index
+2585005942.index
+2355378806.index
+3383219882.index
+3782406245.index
+3330898749.index
+3566397432.index
+2884953081.index
+3270581300.index
+3798166973.index
+3020906736.index

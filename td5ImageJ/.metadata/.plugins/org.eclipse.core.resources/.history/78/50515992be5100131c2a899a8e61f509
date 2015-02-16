@@ -1,0 +1,55 @@
+import ij.*;
+import ij.process.*;
+import ij.gui.*;
+import ij.plugin.filter.*;
+
+public class SED_3D implements PlugInFilter {
+	ImagePlus imp;
+	int H, W, D;
+	Voxel[] voxels;
+
+	public int setup(String arg, ImagePlus imp) {
+		if (arg == "about") {
+			IJ.showMessage("about SED ...",
+					"computes an euclidean distance map "
+							+ "from 3D white components on a black background");
+			return DONE;
+		}
+		this.imp = imp;
+		return DOES_8G;
+	}
+
+	public void run(ImageProcessor ip) {
+		W = ip.getWidth();
+		H = ip.getHeight();
+		D = imp.getStackSize();
+		int size = W * H * D;
+		voxels = new Voxel[size];
+
+		// création de l'image de distance
+		ImagePlus dm = NewImage.createByteImage(
+				"Distance Map of " + imp.getTitle(), W, H, D, 0);
+		ImageProcessor dip = dm.getProcessor();
+
+		// calcul de l'image de distance
+		for (int z = 1; z <= D; ++z) {
+			imp.setSlice(z);
+			ip = imp.getProcessor();
+			for (int y = 0; y < H; ++y) {
+				for (int x = 0; x < W; ++x)
+					if (ip.get(x, y) > 0)
+						voxels[x + y * W + (z - 1) * W * H] = new Voxel(x, y, z, false);
+					else
+						voxels[x + y * W + (z - 1) * W * H] = new Voxel(x, y, z, true);
+			}
+		}
+
+		//Parcours de l'image
+		// Passe Avant F1+F2  F3+F4
+		
+		
+		// affichage de l'image de distance
+		dm.show();
+		dm.updateAndDraw();
+	}
+}
